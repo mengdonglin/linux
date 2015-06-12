@@ -1091,6 +1091,7 @@ struct snd_soc_card {
 	int (*set_bias_level_post)(struct snd_soc_card *,
 				   struct snd_soc_dapm_context *dapm,
 				   enum snd_soc_bias_level level);
+	int (*add_dai)(struct snd_soc_card *, struct snd_soc_dai_driver*);
 
 	long pmdown_time;
 
@@ -1643,6 +1644,9 @@ int snd_soc_of_get_dai_link_codecs(struct device *dev,
 
 void snd_soc_add_dai_link(struct snd_soc_card *card,
 				struct snd_soc_dai_link *dai_link);
+
+int snd_soc_add_dai(struct snd_soc_component *component,
+	struct snd_soc_dai_driver *dai_drv);
 
 #include <sound/soc-dai.h>
 
