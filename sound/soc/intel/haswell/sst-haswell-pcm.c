@@ -406,6 +406,7 @@ static int hsw_waves_param_put(struct snd_kcontrol *kcontrol,
 	return ret;
 }
 
+#if 0
 /* TLV used by both global and stream volumes */
 static const DECLARE_TLV_DB_SCALE(hsw_vol_tlv, -9000, 300, 1);
 
@@ -434,6 +435,59 @@ static const struct snd_kcontrol_new hsw_volume_controls[] = {
 	SND_SOC_BYTES_EXT("Waves Set Param", WAVES_PARAM_COUNT,
 		hsw_waves_param_get, hsw_waves_param_put),
 };
+#endif
+
+static struct snd_soc_tplg_kcontrol_ops bdw_control_ops[] = {
+	{256, hsw_volume_get, hsw_volume_put, 0},
+	{257, hsw_stream_volume_get, hsw_stream_volume_put, 0},
+};
+
+static int bdw_control_load(struct snd_soc_component *comp,
+		struct snd_kcontrol_new *k, struct snd_soc_tplg_ctl_hdr *hdr)
+{
+	struct snd_soc_tplg_private *priv;
+	struct snd_soc_tplg_mixer_control  *mc;
+	struct snd_soc_tplg_enum_control *ec;
+	struct snd_soc_tplg_bytes_control *bc;
+
+	switch (hdr->type) {
+	case SND_SOC_TPLG_TYPE_MIXER:
+		mc = (struct snd_soc_tplg_mixer_control  *)hdr;
+		priv = &mc->priv;
+		break;
+
+	case SND_SOC_TPLG_TYPE_ENUM:
+		ec =  (struct snd_soc_tplg_enum_control  *)hdr;
+		priv = &ec->priv;
+		break;
+
+	case SND_SOC_TPLG_TYPE_BYTES:
+		bc =  (struct snd_soc_tplg_bytes_control  *)hdr;
+		priv = &bc->priv;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	if (priv->size)
+		pr_info("\tPrivate data size %d, data %p\n",
+			priv->size, priv->data);
+
+	return 0;
+}
+
+static int bdw_widget_load(struct snd_soc_component *comp,
+		struct snd_soc_dapm_widget *w,
+		struct snd_soc_tplg_dapm_widget *tplg_w)
+{
+	struct snd_soc_tplg_private *priv = &tplg_w->priv;
+
+	if (priv->size)
+		pr_info("\tPrivate data size %d, file data %p\n",
+			priv->size, priv->data);
+	return 0;
+}
 
 /* Create DMA buffer page table for DSP */
 static int create_adsp_page_table(struct snd_pcm_substream *substream,
@@ -1029,6 +1083,7 @@ static struct snd_soc_dai_driver hsw_dais[] = {
 	},
 };
 
+#if 0
 static const struct snd_soc_dapm_widget widgets[] = {
 
 	/* Backend DAIs  */
@@ -1052,12 +1107,21 @@ static const struct snd_soc_dapm_route graph[] = {
 
 	{"Analog Capture", NULL, "SSP0 CODEC IN"},
 };
+#endif
+
+static struct snd_soc_tplg_ops tplg_ops = {
+	.control_load = bdw_control_load,
+	.widget_load = bdw_widget_load,
+	.io_ops = bdw_control_ops,
+	.io_ops_count = ARRAY_SIZE(bdw_control_ops),
+};
 
 static int hsw_pcm_probe(struct snd_soc_platform *platform)
 {
 	struct hsw_priv_data *priv_data = snd_soc_platform_get_drvdata(platform);
 	struct sst_pdata *pdata = dev_get_platdata(platform->dev);
 	struct device *dma_dev, *dev;
+	const struct firmware *fw;
 	int i, ret = 0;
 
 	if (!pdata)
@@ -1070,6 +1134,19 @@ static int hsw_pcm_probe(struct snd_soc_platform *platform)
 	priv_data->dev = platform->dev;
 	priv_data->pm_state = HSW_PM_STATE_D0;
 	priv_data->soc_card = platform->component.card;
+
+	/* test topology loader code - error handling needs fixing */
+	ret = request_firmware(&fw, "bdw.tplg", platform->dev);
+	if (ret < 0) {
+		dev_err(platform->dev, "cant load firmware bdw.tplg %d\n", ret);
+		return ret;
+	}
+
+	/* load topology */
+	ret = snd_soc_tplg_component_load(&platform->component,
+		&tplg_ops, fw, 1);
+	if (ret < 0)
+		return ret;
 
 	/* allocate DSP buffer page tables */
 	for (i = 0; i < ARRAY_SIZE(hsw_dais); i++) {
@@ -1133,6 +1210,8 @@ static int hsw_pcm_remove(struct snd_soc_platform *platform)
 			snd_dma_free_pages(&priv_data->dmab[i][1]);
 	}
 
+	snd_soc_tplg_component_remove(&platform->component, 1);
+
 	return 0;
 }
 
@@ -1145,12 +1224,12 @@ static struct snd_soc_platform_driver hsw_soc_platform = {
 
 static const struct snd_soc_component_driver hsw_dai_component = {
 	.name = "haswell-dai",
-	.controls = hsw_volume_controls,
-	.num_controls = ARRAY_SIZE(hsw_volume_controls),
-	.dapm_widgets = widgets,
-	.num_dapm_widgets = ARRAY_SIZE(widgets),
-	.dapm_routes = graph,
-	.num_dapm_routes = ARRAY_SIZE(graph),
+	//.controls = hsw_volume_controls,
+	//.num_controls = ARRAY_SIZE(hsw_volume_controls),
+	//.dapm_widgets = widgets,
+	//.num_dapm_widgets = ARRAY_SIZE(widgets),
+	//.dapm_routes = graph,
+	//.num_dapm_routes = ARRAY_SIZE(graph),
 };
 
 static int hsw_pcm_dev_probe(struct platform_device *pdev)
