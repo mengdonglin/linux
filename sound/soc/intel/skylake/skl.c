@@ -282,6 +282,8 @@ static int probe_codec(struct hdac_ext_bus *ebus, int addr)
 		(AC_VERB_PARAMETERS << 8) | AC_PAR_VENDOR_ID;
 	unsigned int res;
 
+	return 0;
+
 	mutex_lock(&bus->cmd_mutex);
 	snd_hdac_bus_send_cmd(bus, cmd);
 	snd_hdac_bus_get_response(bus, addr, &res);
