@@ -70,6 +70,10 @@ struct soc_tplg {
 	const struct snd_soc_tplg_kcontrol_ops *io_ops;
 	int io_ops_count;
 
+	/* bespoke bytes ext kcontrol ops, for TLV bytes control */
+	const struct snd_soc_tplg_bytes_ext_ops *bytes_ext_ops;
+	int bytes_ext_ops_count;
+
 	/* optional fw loading callbacks to component drivers */
 	struct snd_soc_tplg_ops *ops;
 };
@@ -547,6 +551,32 @@ static int soc_tplg_kcontrol_bind_io(struct snd_soc_tplg_ctl_hdr *hdr,
 	return -EINVAL;
 }
 
+/* bind bytes ext get/put handlers for TLV bytes control */
+static int soc_tplg_bytes_ext_bind_io(struct soc_tplg *tplg,
+	struct snd_soc_tplg_io_ops *ops_id,
+	struct soc_bytes_ext *sbe)
+{
+	const struct snd_soc_tplg_bytes_ext_ops *ops = tplg->bytes_ext_ops;
+	int num_ops = tplg->bytes_ext_ops_count;
+	int i;
+
+	/* try bespoke handlers */
+	for (i = 0; i < num_ops; i++) {
+
+		if (sbe->put == NULL && ops[i].id == ops_id->put)
+			sbe->put = ops[i].put;
+		if (sbe->get == NULL && ops[i].id == ops_id->get)
+			sbe->get = ops[i].get;
+	}
+
+	/* bespoke handlers found ? */
+	if (sbe->put && sbe->get)
+		return 0;
+
+	/* nothing to bind */
+	return -EINVAL;
+}
+
 /* bind a widgets to it's evnt handlers */
 int snd_soc_tplg_widget_bind_event(struct snd_soc_dapm_widget *w,
 		const struct snd_soc_tplg_widget_events *events,
@@ -688,6 +718,13 @@ static int soc_tplg_dbytes_create(struct soc_tplg *tplg, unsigned int count,
 			soc_control_err(tplg, &be->hdr, be->hdr.name);
 			kfree(sbe);
 			continue;
+		}
+
+		/* for TLV bytes control */
+		soc_tplg_create_tlv(tplg, &kc, &be->hdr);
+		if (kc.access & SNDRV_CTL_ELEM_ACCESS_TLV_CALLBACK) {
+			soc_tplg_bytes_ext_bind_io(tplg,
+					&be->ext_ops, sbe);
 		}
 
 		/* pass control to driver for optional further init */
@@ -1316,6 +1353,13 @@ static struct snd_kcontrol_new *soc_tplg_dapm_widget_dbytes_create(
 			continue;
 		}
 
+		/* for TLV bytes control */
+		soc_tplg_create_tlv(tplg, &kc[i], &be->hdr);
+		if (kc[i].access & SNDRV_CTL_ELEM_ACCESS_TLV_CALLBACK) {
+			soc_tplg_bytes_ext_bind_io(tplg,
+					&be->ext_ops, sbe);
+		}
+
 		/* pass control to driver for optional further init */
 		err = soc_tplg_init_kcontrol(tplg, &kc[i],
 			(struct snd_soc_tplg_ctl_hdr *)be);
@@ -1737,6 +1781,8 @@ int snd_soc_tplg_component_load(struct snd_soc_component *comp,
 	tplg.req_index = id;
 	tplg.io_ops = ops->io_ops;
 	tplg.io_ops_count = ops->io_ops_count;
+	tplg.bytes_ext_ops = ops->bytes_ext_ops;
+	tplg.bytes_ext_ops_count = ops->bytes_ext_ops_count;
 
 	return soc_tplg_load(&tplg);
 }
