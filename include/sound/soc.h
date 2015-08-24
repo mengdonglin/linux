@@ -1046,6 +1046,11 @@ struct snd_soc_aux_dev {
 	int (*init)(struct snd_soc_component *component);
 };
 
+struct snd_soc_aux_component {
+	const char *name;
+	struct snd_soc_component *comp;
+};
+
 /* SoC card */
 struct snd_soc_card {
 	const char *name;
@@ -1085,6 +1090,11 @@ struct snd_soc_card {
 	struct snd_soc_dai_link *dai_link;
 	int num_links;
 	struct snd_soc_pcm_runtime *rtd;
+
+	/* auxiliary components, e.g. topology */
+	struct snd_soc_aux_component *aux_components;
+	int num_aux_components;
+
 	int num_rtd;
 
 	/* optional codec specific configuration */
