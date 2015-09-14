@@ -265,6 +265,8 @@ static enum snd_soc_dobj_type get_dobj_type(struct snd_soc_tplg_hdr *hdr,
 		return SND_SOC_DOBJ_PCM;
 	case SND_SOC_TPLG_TYPE_CODEC_LINK:
 		return SND_SOC_DOBJ_CODEC_LINK;
+	case SND_SOC_TPLG_TYPE_BACKEND_LINK:
+		return SND_SOC_DOBJ_BACKEND_LINK;
 	default:
 		return SND_SOC_DOBJ_NONE;
 	}
@@ -511,6 +513,20 @@ static void remove_pcm_dai(struct snd_soc_component *comp,
 	kfree(dobj);
 }
 
+static void remove_be_and_cc_link(struct snd_soc_component *comp,
+	struct snd_soc_dobj *dobj, int pass)
+{
+	struct snd_soc_card *card = comp->card;
+	struct snd_soc_dai_link *dai_link = card->dai_link;
+	int i, num_links = card->num_links;
+
+	if (pass != SOC_TPLG_PASS_BE_LINK || pass != SOC_TPLG_PASS_CC_LINK)
+		return;
+
+	for (i = 0; i < num_links; i++)
+		kfree(dai_link[i].params);
+
+}
 /* bind a kcontrol to it's IO handlers */
 static int soc_tplg_kcontrol_bind_io(struct snd_soc_tplg_ctl_hdr *hdr,
 	struct snd_kcontrol_new *k,
@@ -1608,6 +1624,111 @@ err:
 	return ret;
 }
 
+/* return the rate from the corresponding SNDRV_PCM_RATE_* macro */
+static unsigned int snd_soc_return_rate_freq(unsigned int sndrv_pcm_rate)
+{
+	switch (sndrv_pcm_rate) {
+	case SNDRV_PCM_RATE_5512:
+		return 5512;
+	case SNDRV_PCM_RATE_8000:
+		return 8000;
+	case SNDRV_PCM_RATE_11025:
+		return 11025;
+	case SNDRV_PCM_RATE_16000:
+		return 16000;
+	case SNDRV_PCM_RATE_22050:
+		return 22050;
+	case SNDRV_PCM_RATE_32000:
+		return 32000;
+	case SNDRV_PCM_RATE_44100:
+		return 44100;
+	case SNDRV_PCM_RATE_48000:
+		return 48000;
+	case SNDRV_PCM_RATE_64000:
+		return 64000;
+	case SNDRV_PCM_RATE_88200:
+		return 88200;
+	case SNDRV_PCM_RATE_96000:
+		return 96000;
+	case SNDRV_PCM_RATE_176400:
+		return 176400;
+	case SNDRV_PCM_RATE_192000:
+		return 192000;
+	default:
+		return -EINVAL;
+	}
+}
+/* returns the minimum rate. */
+static unsigned int soc_tplg_find_min_rate(unsigned int rates)
+{
+	/* Because the rates are in increasing order, finding the
+	 * first set bit should be enough to find the minimum rate
+	 */
+	int first_set_bit = ffs(rates);
+
+	/* return the rate corresponding to the bit */
+	return snd_soc_return_rate_freq(first_set_bit);
+}
+
+/* returns the maximum rate. */
+static unsigned int soc_tplg_find_max_rate(unsigned int rates)
+{
+	/* Because the rates are in increasing order, finding the
+	 * last set bit should be enough to find the maximum rate
+	 */
+	int last_set_bit = fls(rates);
+
+	/* return the rate corresponding to the bit */
+	return snd_soc_return_rate_freq(last_set_bit);
+}
+
+/* modify already existing backend links and codec links. */
+static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
+	struct snd_soc_tplg_hdr *hdr)
+{
+	int i, j, k;
+	struct snd_soc_tplg_link_config *link;
+	struct snd_soc_card *card = tplg->comp->card;
+	struct snd_soc_dai_link *dai_link = card->dai_link;
+	struct snd_soc_pcm_stream *pcm_stream;
+	struct snd_soc_tplg_stream *tplg_stream;
+	int count = hdr->count, num_dailinks = card->num_links;
+
+	if (tplg->pass != SOC_TPLG_PASS_BE_LINK ||
+		tplg->pass != SOC_TPLG_PASS_CC_LINK)
+		return -EINVAL;
+
+	for (i = 0; i < count; i++) {
+		link = (struct snd_soc_tplg_link_config *) tplg->pos;
+		for (j = 0; j < num_dailinks; j++) {
+			if (dai_link[j].be_id == link->id)
+				break;
+		}
+		/* copy the data from tplg_elem to BE/CC DAI Link. */
+		pcm_stream = kmalloc(sizeof(struct snd_soc_pcm_stream) *
+					link->num_streams, GFP_KERNEL);
+		tplg_stream = link->stream;
+		for (k = 0; k < link->num_streams; k++) {
+			pcm_stream[k].stream_name = kstrdup(tplg_stream->name, GFP_KERNEL);
+			pcm_stream[k].formats = tplg_stream->format;
+			pcm_stream[k].rates = tplg_stream->rate;
+			pcm_stream[k].rate_min = soc_tplg_find_min_rate(
+							tplg_stream->rate);
+			pcm_stream[k].rate_max = soc_tplg_find_max_rate(
+							tplg_stream->rate);
+			pcm_stream[k].channels_min = tplg_stream->channels_min;
+			pcm_stream[k].channels_max = tplg_stream->channels_max;
+			pcm_stream[k].sig_bits = 0;
+		}
+		dai_link[j].params = pcm_stream;
+		dai_link[j].num_params = link->num_streams;
+		tplg->pos += sizeof(struct snd_soc_tplg_link_config);
+	}
+
+
+	return 0;
+}
+
 static int soc_tplg_manifest_load(struct soc_tplg *tplg,
 	struct snd_soc_tplg_hdr *hdr)
 {
@@ -1698,8 +1819,10 @@ static int soc_tplg_load_header(struct soc_tplg *tplg,
 		return soc_tplg_dapm_widget_elems_load(tplg, hdr);
 	case SND_SOC_TPLG_TYPE_PCM:
 	case SND_SOC_TPLG_TYPE_DAI_LINK:
-	case SND_SOC_TPLG_TYPE_CODEC_LINK:
 		return soc_tplg_pcm_dai_elems_load(tplg, hdr);
+	case SND_SOC_TPLG_TYPE_BACKEND_LINK:
+	case SND_SOC_TPLG_TYPE_CODEC_LINK:
+		return soc_tplg_link_elems_load(tplg, hdr);
 	case SND_SOC_TPLG_TYPE_MANIFEST:
 		return soc_tplg_manifest_load(tplg, hdr);
 	default:
@@ -1880,8 +2003,11 @@ int snd_soc_tplg_component_remove(struct snd_soc_component *comp, u32 index)
 				break;
 			case SND_SOC_DOBJ_PCM:
 			case SND_SOC_DOBJ_DAI_LINK:
-			case SND_SOC_DOBJ_CODEC_LINK:
 				remove_pcm_dai(comp, dobj, pass);
+				break;
+			case SND_SOC_DOBJ_BACKEND_LINK:
+			case SND_SOC_DOBJ_CODEC_LINK:
+				remove_be_and_cc_link(comp, dobj, pass);
 				break;
 			default:
 				dev_err(comp->dev, "ASoC: invalid component type %d for removal\n",
