@@ -1704,25 +1704,33 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 			if (dai_link[j].be_id == link->id)
 				break;
 		}
-		/* copy the data from tplg_elem to BE/CC DAI Link. */
-		pcm_stream = kmalloc(sizeof(struct snd_soc_pcm_stream) *
-					link->num_streams, GFP_KERNEL);
-		tplg_stream = link->stream;
-		for (k = 0; k < link->num_streams; k++) {
-			pcm_stream[k].stream_name = kstrdup(tplg_stream->name, GFP_KERNEL);
-			pcm_stream[k].formats = tplg_stream->format;
-			pcm_stream[k].rates = tplg_stream->rate;
-			pcm_stream[k].rate_min = soc_tplg_find_min_rate(
-							tplg_stream->rate);
-			pcm_stream[k].rate_max = soc_tplg_find_max_rate(
-							tplg_stream->rate);
-			pcm_stream[k].channels_min = tplg_stream->channels_min;
-			pcm_stream[k].channels_max = tplg_stream->channels_max;
-			pcm_stream[k].sig_bits = 0;
+
+		if (j == num_dailinks && dai_link[j].be_id != link->id)
+			dev_err(tplg->dev,
+				"ASoC: cannot find Back End DAI with id %d",
+				link->id);
+		else
+		{
+			/* copy the data from tplg_elem to BE/CC DAI Link. */
+			pcm_stream = kmalloc(sizeof(struct snd_soc_pcm_stream) *
+						link->num_streams, GFP_KERNEL);
+			tplg_stream = link->stream;
+			for (k = 0; k < link->num_streams; k++) {
+				pcm_stream[k].stream_name = kstrdup(tplg_stream->name, GFP_KERNEL);
+				pcm_stream[k].formats = tplg_stream->format;
+				pcm_stream[k].rates = tplg_stream->rate;
+				pcm_stream[k].rate_min = soc_tplg_find_min_rate(
+								tplg_stream->rate);
+				pcm_stream[k].rate_max = soc_tplg_find_max_rate(
+								tplg_stream->rate);
+				pcm_stream[k].channels_min = tplg_stream->channels_min;
+				pcm_stream[k].channels_max = tplg_stream->channels_max;
+				pcm_stream[k].sig_bits = 0;
+			}
+			dai_link[j].params = pcm_stream;
+			dai_link[j].num_params = link->num_streams;
+			tplg->pos += sizeof(struct snd_soc_tplg_link_config);
 		}
-		dai_link[j].params = pcm_stream;
-		dai_link[j].num_params = link->num_streams;
-		tplg->pos += sizeof(struct snd_soc_tplg_link_config);
 	}
 
 
