@@ -217,11 +217,13 @@ struct snd_soc_tplg_stream_caps {
  */
 struct snd_soc_tplg_stream {
 	__le32 size;		/* in bytes of this structure */
+	char name[SNDRV_CTL_ELEM_ID_NAME_MAXLEN];
 	__le64 format;		/* SNDRV_PCM_FMTBIT_* */
 	__le32 rate;		/* SNDRV_PCM_RATE_* */
 	__le32 period_bytes;	/* size of period in bytes */
 	__le32 buffer_bytes;	/* size of buffer in bytes */
-	__le32 channels;	/* channels */
+	__le32 channels_min;	/* minimum number of channels supported */
+	__le32 channels_max;	/* maximum number of channels supported */
 } __attribute__((packed));
 
 /*
