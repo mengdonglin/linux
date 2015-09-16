@@ -1381,6 +1381,64 @@ static inline u64 pcm_format_to_bits(snd_pcm_format_t pcm_format)
 	return 1ULL << (__force int) pcm_format;
 }
 
+/**
+ * snd_pcm_find_min_rate - computes minimum rate from the rate mask
+ * @rates: the rate mask
+ *
+ * This function computes the minimum rate supported by the rate mask passed
+ * to the function.
+ *
+ * Return: rate after converting it from the rate_bit to rate using
+ * snd_pcm_rate_bit_to_rate.
+ */
+static inline unsigned int snd_pcm_find_min_rate(unsigned int rates)
+{
+	/**
+	 * Because the rates are in increasing order, finding the
+	 * first set bit should be enough to find the minimum rate.
+	 * substracting 1 from it to make position of first bit as zero.
+	 */
+	unsigned int first_set_bit = ffs(rates) - 1;
+
+	/* return the rate corresponding to the bit and zero if no rates
+	 * are set.
+	 */
+	return rates ? snd_pcm_rate_bit_to_rate(1 << first_set_bit) : 0;
+}
+
+/**
+ * snd_pcm_find_max_rate - computes maximum rate from the rate mask
+ * @rates: the rate mask
+ *
+ * This function computes the maximum rate supported by the rate mask passed
+ * to the function.
+ *
+ * Return: rate after converting it from the rate_bit to rate using
+ * snd_pcm_rate_bit_to_rate.
+ */
+static inline unsigned int snd_pcm_find_max_rate(unsigned int rates)
+{
+	unsigned int last_set_bit;
+
+	/**
+	 * clear SNDRV_PCM_RATE_CONTINUOUS and SNDRV_PCM_RATE_KNOT so
+	 * that they are not detected as maximum rates.
+	 */
+	rates &= ~(SNDRV_PCM_RATE_CONTINUOUS);
+	rates &= ~(SNDRV_PCM_RATE_KNOT);
+
+	/**
+	 * Because the rates are in increasing order, finding the
+	 * last set bit should be enough to find the maximum rate.
+	 */
+	last_set_bit = fls(rates);
+
+	/**
+	 * return the rate corresponding to the bit.
+	 */
+	return rates ? snd_pcm_rate_bit_to_rate(last_set_bit) : 0;
+}
+
 /* printk helpers */
 #define pcm_err(pcm, fmt, args...) \
 	dev_err((pcm)->card->dev, fmt, ##args)
