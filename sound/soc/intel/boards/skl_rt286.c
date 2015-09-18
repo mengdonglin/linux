@@ -20,6 +20,8 @@
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/firmware.h>
+#include <sound/soc-topology.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
@@ -243,10 +245,44 @@ static struct snd_soc_dai_link skylake_rt286_dais[] = {
 	},*/
 };
 
+static int skl_topology_probe(struct snd_soc_component *component)
+{
+	int ret = 0;
+	const struct firmware *fw;
+	
+	ret = request_firmware(&fw, "skl.tplg", component->dev);
+	if (ret < 0) {
+		return ret;
+	}
+
+	/*
+	 * The complete tplg for SKL is loaded as index 0, we don't use
+	 * any other index
+	 */
+	ret = snd_soc_tplg_component_load(component, NULL, fw, 1);
+	if (ret < 0) {
+		dev_err(bus->dev, "tplg component load failed%d\n", ret);
+		return -EINVAL;
+	}
+}
+
+static void skl_topology_probe(struct snd_soc_component *component)
+{
+	snd_soc_tplg_component_remove(component, 1);	
+}
+
+static const struct snd_soc_component_driver skl_tplg_component = {
+	.name = "skl-board-topology";
+	.probe = skl_topology_probe;
+	.remove = skl_topology_remove;
+};
+
 /* skylake audio machine driver for SPT + RT286S */
 static struct snd_soc_card skylake_rt286 = {
 	.name = "skylake-rt286",
 	.owner = THIS_MODULE,
+	.aux_components = skl_tplg_component,
+	.num_aux_components = ARRAY_SIZE(skl_tplg_component);
 	.dai_link = skylake_rt286_dais,
 	.num_links = ARRAY_SIZE(skylake_rt286_dais),
 	.controls = skylake_controls,
