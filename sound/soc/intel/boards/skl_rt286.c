@@ -245,6 +245,9 @@ static struct snd_soc_dai_link skylake_rt286_dais[] = {
 	},*/
 };
 
+static struct snd_soc_tplg_ops skl_ops = {
+};
+
 static int skl_topology_probe(struct snd_soc_component *component)
 {
 	int ret = 0;
@@ -259,30 +262,38 @@ static int skl_topology_probe(struct snd_soc_component *component)
 	 * The complete tplg for SKL is loaded as index 0, we don't use
 	 * any other index
 	 */
-	ret = snd_soc_tplg_component_load(component, NULL, fw, 1);
+	ret = snd_soc_tplg_component_load(component, &skl_ops, fw, 1);
 	if (ret < 0) {
-		dev_err(bus->dev, "tplg component load failed%d\n", ret);
 		return -EINVAL;
 	}
+	return 0;
 }
 
-static void skl_topology_probe(struct snd_soc_component *component)
+static void skl_topology_remove(struct snd_soc_component *component)
 {
 	snd_soc_tplg_component_remove(component, 1);	
 }
 
 static const struct snd_soc_component_driver skl_tplg_component = {
-	.name = "skl-board-topology";
-	.probe = skl_topology_probe;
-	.remove = skl_topology_remove;
+	.name = "skl-board-topology",
+	.probe = skl_topology_probe,
+	.remove = skl_topology_remove,
+};
+
+static struct snd_soc_aux_component skylake_topology_components[] = {
+
+	/* Board Topology Component */
+	{
+		.name = "skl_alc286s_i2s",
+	},
 };
 
 /* skylake audio machine driver for SPT + RT286S */
 static struct snd_soc_card skylake_rt286 = {
 	.name = "skylake-rt286",
 	.owner = THIS_MODULE,
-	.aux_components = skl_tplg_component,
-	.num_aux_components = ARRAY_SIZE(skl_tplg_component);
+	.aux_components = skylake_topology_components,
+	.num_aux_components = ARRAY_SIZE(skylake_topology_components),
 	.dai_link = skylake_rt286_dais,
 	.num_links = ARRAY_SIZE(skylake_rt286_dais),
 	.controls = skylake_controls,
@@ -296,14 +307,28 @@ static struct snd_soc_card skylake_rt286 = {
 
 static int skylake_audio_probe(struct platform_device *pdev)
 {
+	int ret;
 	skylake_rt286.dev = &pdev->dev;
 
-	return snd_soc_register_card(&skylake_rt286);
+	ret = snd_soc_register_component(&pdev->dev, &skl_tplg_component, NULL, 0);
+	if (ret) {
+		 dev_err(&pdev->dev, "registering soc card failed\n");
+		 snd_soc_unregister_component(&pdev->dev);
+	}	
+
+	ret = snd_soc_register_card(&skylake_rt286);
+	if (ret) {
+		dev_err(&pdev->dev, "registering soc card failed\n");
+		snd_soc_unregister_component(&pdev->dev);
+	}
+
+	return ret;
 }
 
 static int skylake_audio_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_card(&skylake_rt286);
+	snd_soc_unregister_component(&pdev->dev);
 	return 0;
 }
 
