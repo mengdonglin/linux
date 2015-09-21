@@ -1644,7 +1644,7 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 	struct snd_soc_tplg_stream *tplg_stream;
 	int count = hdr->count, num_dailinks = card->num_links;
 
-	if (tplg->pass != SOC_TPLG_PASS_BE_LINK ||
+	if (tplg->pass != SOC_TPLG_PASS_BE_LINK &&
 		tplg->pass != SOC_TPLG_PASS_CC_LINK)
 		return -EINVAL;
 
