@@ -1646,7 +1646,7 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 
 	if (tplg->pass != SOC_TPLG_PASS_BE_LINK &&
 		tplg->pass != SOC_TPLG_PASS_CC_LINK)
-		return -EINVAL;
+		return 0;
 
 	for (i = 0; i < count; i++) {
 		link = (struct snd_soc_tplg_link_config *) tplg->pos;
