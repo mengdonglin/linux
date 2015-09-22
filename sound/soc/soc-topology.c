@@ -1643,11 +1643,12 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 	struct snd_soc_pcm_stream *pcm_stream;
 	struct snd_soc_tplg_stream *tplg_stream;
 	int count = hdr->count, num_dailinks = card->num_links;
-
+	printk(KERN_ERR "%s: %d tplg_pass : %d.\n",__func__, __LINE__,tplg->pass);
 	if (tplg->pass != SOC_TPLG_PASS_BE_LINK &&
 		tplg->pass != SOC_TPLG_PASS_CC_LINK)
 		return 0;
 
+	printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 	for (i = 0; i < count; i++) {
 		link = (struct snd_soc_tplg_link_config *) tplg->pos;
 		/**
@@ -1655,11 +1656,13 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 		 * Here we are searching for the existing BE or CC Link
 		 * by it unique id (be_id).
 		 */
+		printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 		for (j = 0; j < num_dailinks; j++) {
 			if (dai_link[j].be_id == link->id)
 				break;
 		}
 
+		printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 		if (j == num_dailinks && dai_link[j].be_id != link->id) {
 			dev_err(tplg->dev,
 				"ASoC: cannot find Back End DAI with id %d",
@@ -1667,11 +1670,13 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 			continue;
 		}
 
+		printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 		/* copy the data from tplg_elem to BE/CC DAI Link. */
 		pcm_stream = kmalloc(sizeof(struct snd_soc_pcm_stream) *
 					link->num_streams, GFP_KERNEL);
 		tplg_stream = link->stream;
 
+		printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 		/* copy data for each stream. */
 		for (k = 0; k < link->num_streams; k++) {
 			pcm_stream[k].stream_name = kstrdup(tplg_stream->name, GFP_KERNEL);
@@ -1688,11 +1693,15 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 			pcm_stream[k].sig_bits = 0;
 		}
 
+		printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 		dai_link[j].params = pcm_stream;
 		dai_link[j].num_params = link->num_streams;
+		printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 		tplg->pos += sizeof(struct snd_soc_tplg_link_config);
+		printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 	}
 
+		printk(KERN_ERR "%s: %d.\n",__func__, __LINE__);
 
 	return 0;
 }
