@@ -252,7 +252,7 @@ static int skl_topology_probe(struct snd_soc_component *component)
 {
 	int ret = 0;
 	const struct firmware *fw;
-	
+
 	ret = request_firmware(&fw, "skl.tplg", component->dev);
 	if (ret < 0) {
 		return ret;
@@ -264,7 +264,8 @@ static int skl_topology_probe(struct snd_soc_component *component)
 	 */
 	ret = snd_soc_tplg_component_load(component, &skl_ops, fw, 1);
 	if (ret < 0) {
-		return -EINVAL;
+		printk(KERN_ERR "error %d loading topology file.\n",ret);
+		return ret;
 	}
 	return 0;
 }
