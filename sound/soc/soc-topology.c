@@ -1722,8 +1722,8 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 			pcm_hw_configs[k].rate_max = snd_pcm_find_max_rate(
 							tplg->dev,
 							tplg_stream[k].rate);
-			pcm_hw_configs[k].channels_min = tplg_stream[k].channels_min;
-			pcm_hw_configs[k].channels_max = tplg_stream[k].channels_max;
+			pcm_hw_configs[k].channels_min = tplg_stream[k].channels;
+			pcm_hw_configs[k].channels_max = tplg_stream[k].channels;
 		}
 
 		dai_link[j].hw_params = pcm_hw_configs;
