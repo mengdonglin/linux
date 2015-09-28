@@ -977,6 +977,7 @@ struct snd_soc_dai_link {
 	const char *platform_name;
 	struct device_node *platform_of_node;
 	int be_id;	/* optional ID for machine driver BE identification */
+	int cc_id;	/* optional ID for machine driver CC identification */
 
 	const struct snd_soc_pcm_stream *params;
 	unsigned int num_params;

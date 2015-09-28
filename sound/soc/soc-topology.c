@@ -1672,7 +1672,7 @@ static int soc_tplg_pcm_elems_load(struct soc_tplg *tplg,
 	return 0;
 }
 
-static void soc_tplg_make_hw_params(struct snd_pcm_hardware *hw,
+static void config_hw_params(struct snd_pcm_hardware *hw,
 	struct snd_soc_tplg_stream *streams, int num_streams)
 {
 	struct snd_soc_tplg_stream *stream;
@@ -1706,51 +1706,117 @@ static void soc_tplg_make_hw_params(struct snd_pcm_hardware *hw,
 		}
 }
 
-/* modify already existing backend links and codec links. */
-static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
+/* Configure existing BE DAI links. */
+static int soc_tplg_be_link_elems_load(struct soc_tplg *tplg,
 	struct snd_soc_tplg_hdr *hdr)
 {
-	int i, j;
 	struct snd_soc_tplg_link_config *link;
 	struct snd_soc_card *card = tplg->comp->card;
 	struct snd_soc_dai_link *dai_link = card->dai_link;
-	struct snd_pcm_hardware *pcm_hw;
 	int count = hdr->count, num_dailinks = card->num_links;
+	struct snd_pcm_hardware *pcm_hw;
+	bool link_found;
+	int i, j;
 
-	if (tplg->pass != SOC_TPLG_PASS_BE_LINK &&
-		tplg->pass != SOC_TPLG_PASS_CC_LINK)
+	if (tplg->pass != SOC_TPLG_PASS_BE_LINK)
 		return 0;
 
 	for (i = 0; i < count; i++) {
 		link = (struct snd_soc_tplg_link_config *) tplg->pos;
+		
 		/**
-		 * The machine driver will initially create BE and CC Links.
-		 * In topology, we are searching for the existing BE Link
-		 * by it unique id (be_id).
+		 * The machine driver should define BE Links.
+		 * Look for the existing BE Link by it unique id (be_id).
 		 */
+		link_found = false;
 		for (j = 0; j < num_dailinks; j++) {
-			if (dai_link[j].be_id == link->id)
+			if (dai_link[j].be_id == link->id) {				
+				link_found = true;
 				break;
+			}
 		}
 
-		if (j == num_dailinks && dai_link[j].be_id != link->id) {
-			dev_err(tplg->dev,
-				"ASoC: cannot find Back End DAI with id %d",
-				link->id);
-			continue;
-		}
+		if (!link_found) {
+			dev_err(tplg->dev, "ASoC: cannot find BE link %s, id %d\n", link->name, link->id);
+		} else {
+			pcm_hw = kzalloc(sizeof(struct snd_pcm_hardware), GFP_KERNEL);
+			if (!pcm_hw)
+				return -ENOMEM;
 
-		/* copy the data from tplg_elem to BE/CC DAI Link. */
-		pcm_hw = kzalloc(sizeof(struct snd_pcm_hardware), GFP_KERNEL);
-		if (!pcm_hw)
-			return -ENOMEM;
-		soc_tplg_make_hw_params(pcm_hw,
-			link->streams, link->num_streams);
-		dai_link[j].hw_params = pcm_hw;
+			config_hw_params(pcm_hw, link->streams, link->num_streams);
+			dai_link->hw_params = pcm_hw;
+		}
 
 		tplg->pos += sizeof(struct snd_soc_tplg_link_config);
 	}
 
+	return 0;
+}
+
+
+
+static int config_link_params(struct snd_soc_dai_link *dai_link,
+	struct snd_soc_tplg_stream *streams, int num_streams)
+{
+	struct snd_soc_pcm_stream *params;
+	int i;
+	
+	params = kzalloc(sizeof(struct snd_soc_pcm_stream) * num_streams, GFP_KERNEL);
+	if (!params)
+		return -ENOMEM;
+
+	dai_link->params = params;
+	dai_link->num_params = num_streams;
+
+	for (i = 0; i < num_streams; i++) {
+		params[i].stream_name = kstrdup(streams[i].name, GFP_KERNEL);
+		params[i].formats = streams[i].format;
+		params[i].rates = streams[i].rate;
+		params[i].channels_min = streams[i].channels;
+		params[i].channels_max = streams[i].channels;
+	}
+		
+	return 0;
+}
+
+/* Configure existing CC links or create new ones. */
+static int soc_tplg_cc_link_elems_load(struct soc_tplg *tplg,
+	struct snd_soc_tplg_hdr *hdr)
+{
+	struct snd_soc_tplg_link_config *link;
+	struct snd_soc_card *card = tplg->comp->card;
+	struct snd_soc_dai_link *dai_link = card->dai_link;
+	int count = hdr->count, num_dailinks = card->num_links;
+	bool link_found;
+	int i, j;
+
+	if (tplg->pass != SOC_TPLG_PASS_CC_LINK)
+		return 0;
+
+	for (i = 0; i < count; i++) {
+		link = (struct snd_soc_tplg_link_config *) tplg->pos;
+
+		link_found = false;
+		for (j = 0; j < num_dailinks; j++) {
+			if (dai_link[j].cc_id == link->id) {				
+				link_found = true;
+				break;
+			}
+		}
+
+		if (link_found) {
+			dev_dbg(tplg->dev, "ASoC: cannot find CC link %s, id %d\n", link->name, link->id);
+			/* TODO: create new DAI links */
+
+		} else {
+			if (dai_link->params)
+				return 0; /* already has params */
+			
+			config_link_params(dai_link, link->streams, link->num_streams);
+		}
+
+		tplg->pos += sizeof(struct snd_soc_tplg_link_config);
+	}
 
 	return 0;
 }
@@ -1847,8 +1913,9 @@ static int soc_tplg_load_header(struct soc_tplg *tplg,
 	case SND_SOC_TPLG_TYPE_DAI_LINK:
 		return soc_tplg_pcm_elems_load(tplg, hdr);
 	case SND_SOC_TPLG_TYPE_BACKEND_LINK:
+		return soc_tplg_be_link_elems_load(tplg, hdr);
 	case SND_SOC_TPLG_TYPE_CODEC_LINK:
-		return soc_tplg_link_elems_load(tplg, hdr);
+		return soc_tplg_cc_link_elems_load(tplg, hdr);
 	case SND_SOC_TPLG_TYPE_MANIFEST:
 		return soc_tplg_manifest_load(tplg, hdr);
 	default:
