@@ -1672,16 +1672,49 @@ static int soc_tplg_pcm_elems_load(struct soc_tplg *tplg,
 	return 0;
 }
 
+static void soc_tplg_make_hw_params(struct snd_pcm_hardware *hw,
+	struct snd_soc_tplg_stream *streams, int num_streams)
+{
+	struct snd_soc_tplg_stream *stream;
+	unsigned int rate;
+	int i;
+
+	for (i = 0; i < num_streams; i++) {
+		stream = streams + i;
+		hw->formats |= stream->format;
+
+		hw->rates |= stream->rate;
+		rate = snd_pcm_rate_bit_to_rate(stream->rate);
+		if (!hw->rate_min || hw->rate_min > rate)
+			hw->rate_min = rate;
+		if (hw->rate_max < rate)
+			hw->rate_max = rate;
+
+		if (!hw->channels_min || hw->channels_min > stream->channels)
+			hw->channels_min = stream->channels;
+		if (hw->channels_max < stream->channels)
+			hw->channels_max = stream->channels;
+
+		if (!hw->period_bytes_min
+			|| hw->period_bytes_min > stream->period_bytes)
+			hw->period_bytes_min = stream->period_bytes;
+		if (hw->period_bytes_max < stream->period_bytes)
+			hw->period_bytes_max = stream->period_bytes;
+
+		if (hw->buffer_bytes_max < stream->buffer_bytes)
+			hw->buffer_bytes_max = stream->buffer_bytes;
+		}
+}
+
 /* modify already existing backend links and codec links. */
 static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 	struct snd_soc_tplg_hdr *hdr)
 {
-	int i, j, k;
+	int i, j;
 	struct snd_soc_tplg_link_config *link;
 	struct snd_soc_card *card = tplg->comp->card;
 	struct snd_soc_dai_link *dai_link = card->dai_link;
-	struct snd_pcm_hardware *pcm_hw_configs;
-	struct snd_soc_tplg_stream *tplg_stream;
+	struct snd_pcm_hardware *pcm_hw;
 	int count = hdr->count, num_dailinks = card->num_links;
 
 	if (tplg->pass != SOC_TPLG_PASS_BE_LINK &&
@@ -1708,26 +1741,13 @@ static int soc_tplg_link_elems_load(struct soc_tplg *tplg,
 		}
 
 		/* copy the data from tplg_elem to BE/CC DAI Link. */
-		pcm_hw_configs = kmalloc(sizeof(struct snd_pcm_hardware) *
-					link->num_streams, GFP_KERNEL);
-		tplg_stream = link->streams;
+		pcm_hw = kzalloc(sizeof(struct snd_pcm_hardware), GFP_KERNEL);
+		if (!pcm_hw)
+			return -ENOMEM;
+		soc_tplg_make_hw_params(pcm_hw,
+			link->streams, link->num_streams);
+		dai_link[j].hw_params = pcm_hw;
 
-		/* copy data for each stream. */
-		for (k = 0; k < link->num_streams; k++) {
-			pcm_hw_configs[k].formats = tplg_stream[k].format;
-			pcm_hw_configs[k].rates = tplg_stream[k].rate;
-			pcm_hw_configs[k].rate_min = snd_pcm_find_min_rate(
-							tplg->dev,
-							tplg_stream[k].rate);
-			pcm_hw_configs[k].rate_max = snd_pcm_find_max_rate(
-							tplg->dev,
-							tplg_stream[k].rate);
-			pcm_hw_configs[k].channels_min = tplg_stream[k].channels;
-			pcm_hw_configs[k].channels_max = tplg_stream[k].channels;
-		}
-
-		dai_link[j].hw_params = pcm_hw_configs;
-		dai_link[j].num_hw_params = link->num_streams;
 		tplg->pos += sizeof(struct snd_soc_tplg_link_config);
 	}
 

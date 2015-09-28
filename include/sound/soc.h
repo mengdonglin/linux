@@ -983,7 +983,6 @@ struct snd_soc_dai_link {
 
 	/* Stores HW params. Used by topology core. */
 	const struct snd_pcm_hardware *hw_params;
-	unsigned int num_hw_params;
 
 	unsigned int dai_fmt;           /* format to set on init */
 
