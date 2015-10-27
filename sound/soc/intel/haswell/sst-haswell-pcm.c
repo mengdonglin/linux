@@ -130,6 +130,11 @@ enum hsw_pm_state {
 	HSW_PM_STATE_D3 = 2,
 };
 
+struct hsw_dai_caps {
+	bool playback;
+	bool capture;
+};
+
 /* private data for the driver */
 struct hsw_priv_data {
 	/* runtime DSP */
@@ -141,6 +146,10 @@ struct hsw_priv_data {
 
 	/* page tables */
 	struct snd_dma_buffer dmab[HSW_PCM_COUNT][2];
+
+	/* DAI */
+	struct hsw_dai_caps *dai_caps;
+	int num_dais;
 
 	/* DAI data */
 	struct hsw_pcm_data pcm[HSW_PCM_COUNT][2];
@@ -487,6 +496,36 @@ static int bdw_widget_load(struct snd_soc_component *comp,
 		pr_info("\tPrivate data size %d, file data %p\n",
 			priv->size, priv->data);
 	return 0;
+}
+
+static int dai_idx = 0;
+static int bdw_pcm_dai_load(struct snd_soc_component *comp,
+		struct snd_soc_dai_driver *pcm_dai)
+{
+	struct platform_device *pdev;
+	struct hsw_priv_data *priv_data;
+
+	printk("amanda: bdw_pcm_dai_load: load dai idx %d, name %s\n", dai_idx, pcm_dai->name);
+
+	pdev = container_of(comp->dev, struct platform_device, dev);
+	priv_data = platform_get_drvdata(pdev);
+
+	if (dai_idx < priv_data->num_dais) {
+		if (pcm_dai->playback.stream_name)
+			priv_data->dai_caps[dai_idx].playback = 1;
+		if (pcm_dai->capture.stream_name)
+			priv_data->dai_caps[dai_idx].capture = 1;
+		dai_idx++;
+		return 0;
+	} else
+		return -EINVAL;
+}
+
+
+static int bdw_pcm_dai_unload(struct snd_soc_component *comp,
+		struct snd_soc_dobj *dobj)
+{
+		return 0;
 }
 
 /* Create DMA buffer page table for DSP */
@@ -1024,6 +1063,7 @@ static int hsw_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	return ret;
 }
 
+#if 0
 #define HSW_FORMATS \
 	(SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S16_LE)
 
@@ -1082,6 +1122,7 @@ static struct snd_soc_dai_driver hsw_dais[] = {
 		},
 	},
 };
+#endif
 
 #if 0
 static const struct snd_soc_dapm_widget widgets[] = {
@@ -1112,6 +1153,8 @@ static const struct snd_soc_dapm_route graph[] = {
 static struct snd_soc_tplg_ops tplg_ops = {
 	.control_load = bdw_control_load,
 	.widget_load = bdw_widget_load,
+	.dai_load = bdw_pcm_dai_load,
+	.dai_unload = bdw_pcm_dai_unload,
 	.io_ops = bdw_control_ops,
 	.io_ops_count = ARRAY_SIZE(bdw_control_ops),
 };
@@ -1135,6 +1178,12 @@ static int hsw_pcm_probe(struct snd_soc_platform *platform)
 	priv_data->pm_state = HSW_PM_STATE_D0;
 	priv_data->soc_card = platform->component.card;
 
+	priv_data->num_dais = 4;
+	priv_data->dai_caps = kzalloc(sizeof(struct hsw_dai_caps) * priv_data->num_dais,
+				GFP_KERNEL);
+	if (!priv_data->dai_caps)
+		return -ENOMEM;
+
 	/* test topology loader code - error handling needs fixing */
 	ret = request_firmware(&fw, "bdw.tplg", platform->dev);
 	if (ret < 0) {
@@ -1149,10 +1198,10 @@ static int hsw_pcm_probe(struct snd_soc_platform *platform)
 		return ret;
 
 	/* allocate DSP buffer page tables */
-	for (i = 0; i < ARRAY_SIZE(hsw_dais); i++) {
+	for (i = 0; i < priv_data->num_dais; i++) {
 
 		/* playback */
-		if (hsw_dais[i].playback.channels_min) {
+		if (priv_data->dai_caps[i].playback) {
 			mutex_init(&priv_data->pcm[i][SNDRV_PCM_STREAM_PLAYBACK].mutex);
 			ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, dma_dev,
 				PAGE_SIZE, &priv_data->dmab[i][0]);
@@ -1161,7 +1210,7 @@ static int hsw_pcm_probe(struct snd_soc_platform *platform)
 		}
 
 		/* capture */
-		if (hsw_dais[i].capture.channels_min) {
+		if (priv_data->dai_caps[i].capture) {
 			mutex_init(&priv_data->pcm[i][SNDRV_PCM_STREAM_CAPTURE].mutex);
 			ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, dma_dev,
 				PAGE_SIZE, &priv_data->dmab[i][1]);
@@ -1186,9 +1235,9 @@ static int hsw_pcm_probe(struct snd_soc_platform *platform)
 
 err:
 	for (--i; i >= 0; i--) {
-		if (hsw_dais[i].playback.channels_min)
+		if (priv_data->dai_caps[i].playback)
 			snd_dma_free_pages(&priv_data->dmab[i][0]);
-		if (hsw_dais[i].capture.channels_min)
+		if (priv_data->dai_caps[i].capture)
 			snd_dma_free_pages(&priv_data->dmab[i][1]);
 	}
 	return ret;
@@ -1203,10 +1252,10 @@ static int hsw_pcm_remove(struct snd_soc_platform *platform)
 	pm_runtime_disable(platform->dev);
 	hsw_pcm_free_modules(priv_data);
 
-	for (i = 0; i < ARRAY_SIZE(hsw_dais); i++) {
-		if (hsw_dais[i].playback.channels_min)
+	for (i = 0; i < priv_data->num_dais; i++) {
+		if (priv_data->dai_caps[i].playback)
 			snd_dma_free_pages(&priv_data->dmab[i][0]);
-		if (hsw_dais[i].capture.channels_min)
+		if (priv_data->dai_caps[i].capture)
 			snd_dma_free_pages(&priv_data->dmab[i][1]);
 	}
 
@@ -1222,6 +1271,7 @@ static struct snd_soc_platform_driver hsw_soc_platform = {
 	.pcm_new	= hsw_pcm_new,
 };
 
+#if 0
 static const struct snd_soc_component_driver hsw_dai_component = {
 	.name = "haswell-dai",
 	//.controls = hsw_volume_controls,
@@ -1231,6 +1281,7 @@ static const struct snd_soc_component_driver hsw_dai_component = {
 	//.dapm_routes = graph,
 	//.num_dapm_routes = ARRAY_SIZE(graph),
 };
+#endif
 
 static int hsw_pcm_dev_probe(struct platform_device *pdev)
 {
@@ -1255,11 +1306,6 @@ static int hsw_pcm_dev_probe(struct platform_device *pdev)
 	ret = snd_soc_register_platform(&pdev->dev, &hsw_soc_platform);
 	if (ret < 0)
 		goto err_plat;
-
-	ret = snd_soc_register_component(&pdev->dev, &hsw_dai_component,
-		hsw_dais, ARRAY_SIZE(hsw_dais));
-	if (ret < 0)
-		goto err_comp;
 
 	return 0;
 

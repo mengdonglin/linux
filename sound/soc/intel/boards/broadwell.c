@@ -148,55 +148,59 @@ static int broadwell_rtd_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+/* Front End DAI links */
+static struct snd_soc_dai_link broadwell_system_pcm_link = {
+	.name = "System PCM",
+	.stream_name = "System Playback/Capture",
+	.cpu_dai_name = "System Pin",
+	.platform_name = "haswell-pcm-audio",
+	.dynamic = 1,
+	.codec_name = "snd-soc-dummy",
+	.codec_dai_name = "snd-soc-dummy-dai",
+	.init = broadwell_rtd_init,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
+	.dpcm_playback = 1,
+	.dpcm_capture = 1,
+};
+
+static struct snd_soc_dai_link broadwell_offload0_link = {
+	.name = "Offload0",
+	.stream_name = "Offload0 Playback",
+	.cpu_dai_name = "Offload0 Pin",
+	.platform_name = "haswell-pcm-audio",
+	.dynamic = 1,
+	.codec_name = "snd-soc-dummy",
+	.codec_dai_name = "snd-soc-dummy-dai",
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
+	.dpcm_playback = 1,
+};
+
+static struct snd_soc_dai_link broadwell_offload1_link = {
+	.name = "Offload1",
+	.stream_name = "Offload1 Playback",
+	.cpu_dai_name = "Offload1 Pin",
+	.platform_name = "haswell-pcm-audio",
+	.dynamic = 1,
+	.codec_name = "snd-soc-dummy",
+	.codec_dai_name = "snd-soc-dummy-dai",
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
+	.dpcm_playback = 1,
+};
+
+static struct snd_soc_dai_link broadwell_loopback_pcm_link = {
+	.name = "Loopback PCM",
+	.stream_name = "Loopback",
+	.cpu_dai_name = "Loopback Pin",
+	.platform_name = "haswell-pcm-audio",
+	.dynamic = 0,
+	.codec_name = "snd-soc-dummy",
+	.codec_dai_name = "snd-soc-dummy-dai",
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
+	.dpcm_capture = 1,
+};
+
 /* broadwell digital audio interface glue - connects codec <--> CPU */
 static struct snd_soc_dai_link broadwell_rt286_dais[] = {
-	/* Front End DAI links */
-	{
-		.name = "System PCM",
-		.stream_name = "System Playback/Capture",
-		.cpu_dai_name = "System Pin",
-		.platform_name = "haswell-pcm-audio",
-		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.init = broadwell_rtd_init,
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "Offload0",
-		.stream_name = "Offload0 Playback",
-		.cpu_dai_name = "Offload0 Pin",
-		.platform_name = "haswell-pcm-audio",
-		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
-		.dpcm_playback = 1,
-	},
-	{
-		.name = "Offload1",
-		.stream_name = "Offload1 Playback",
-		.cpu_dai_name = "Offload1 Pin",
-		.platform_name = "haswell-pcm-audio",
-		.dynamic = 1,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
-		.dpcm_playback = 1,
-	},
-	{
-		.name = "Loopback PCM",
-		.stream_name = "Loopback",
-		.cpu_dai_name = "Loopback Pin",
-		.platform_name = "haswell-pcm-audio",
-		.dynamic = 0,
-		.codec_name = "snd-soc-dummy",
-		.codec_dai_name = "snd-soc-dummy-dai",
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST, SND_SOC_DPCM_TRIGGER_POST},
-		.dpcm_capture = 1,
-	},
 	/* Back End DAI links */
 	{
 		/* SSP0 - Codec */
@@ -245,12 +249,65 @@ static int broadwell_resume(struct snd_soc_card *card){
 	return 0;
 }
 
+static int bdw_add_dai_link(struct snd_soc_card *card, struct snd_soc_dai_link *link)
+{
+	struct snd_soc_dai_link *src_link;
+	printk("bdw_add_dai_link: dai link name %s, stream name %s\n", link->name, link->stream_name);
+
+	if (!link->stream_name) {
+		WARN_ON(1);
+		return 0;
+	}
+
+	if (!strcmp(link->stream_name, broadwell_system_pcm_link.stream_name)) {
+		printk("bdw_add_dai_link: add the system pcm link\n");
+		src_link = &broadwell_system_pcm_link;
+		link->init = broadwell_rtd_init;
+	} else if (!strcmp(link->stream_name, broadwell_offload0_link.stream_name)) {
+		printk("bdw_add_dai_link: add the offload0 link\n");
+		src_link = &broadwell_offload0_link;
+	} else if (!strcmp(link->stream_name, broadwell_offload1_link.stream_name)) {
+		printk("bdw_add_dai_link: add the offload1 link\n");
+		src_link = &broadwell_offload1_link;
+	} else if (!strcmp(link->stream_name, broadwell_loopback_pcm_link.stream_name)) {
+		printk("bdw_add_dai_link: add the loopback link\n");
+		src_link = &broadwell_loopback_pcm_link;
+	} else {
+		printk("bdw_add_dai_link: dai link name %s, Invalid stream name %s\n", link->name, link->stream_name);
+		return -EINVAL;
+	}
+
+	link->name = src_link->name;
+	link->cpu_dai_name = src_link->cpu_dai_name;
+	link->platform_name = src_link->platform_name;
+	link->dynamic = src_link->dynamic;
+	link->codec_name = src_link->codec_name;
+	link->codec_dai_name = src_link->codec_dai_name;
+	link->trigger[0] = src_link->trigger[0];
+	link->trigger[1] = src_link->trigger[1];
+	link->dpcm_playback = src_link->dpcm_playback;
+	link->dpcm_capture = src_link->dpcm_playback;
+
+	printk("\t dai link name %s, stream name %s\n", link->name, link->stream_name);
+	printk("\t cpu_dai_name %s, platform_name %s\n", link->cpu_dai_name, link->platform_name);
+	printk("\t codec_name %s, codec_dai_name %s\n", link->codec_name, link->codec_dai_name);
+	printk("\t dynamic %d, dpcm_playback %d, dpcm_capture%d\n", link->dynamic, link->dpcm_playback,  link->dpcm_capture);
+	return 0;
+}
+
+
+static struct snd_soc_aux_dev bdw_tplg_dev = {
+	.name = "haswell-pcm-audio",
+};
+
 /* broadwell audio machine driver for WPT + RT286S */
 static struct snd_soc_card broadwell_rt286 = {
 	.name = "broadwell-rt286",
 	.owner = THIS_MODULE,
 	.dai_link = broadwell_rt286_dais,
 	.num_links = ARRAY_SIZE(broadwell_rt286_dais),
+	.aux_dev = &bdw_tplg_dev,
+	.num_aux_devs = 1,
 	.controls = broadwell_controls,
 	.num_controls = ARRAY_SIZE(broadwell_controls),
 	.dapm_widgets = broadwell_widgets,
@@ -260,6 +317,7 @@ static struct snd_soc_card broadwell_rt286 = {
 	.fully_routed = true,
 	.suspend_pre = broadwell_suspend,
 	.resume_post = broadwell_resume,
+	.add_dai_link = bdw_add_dai_link,
 };
 
 static int broadwell_audio_probe(struct platform_device *pdev)
