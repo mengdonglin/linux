@@ -754,7 +754,7 @@ static void acm_tty_flush_chars(struct tty_struct *tty)
 
 	if (acm->susp_count)
 		usb_anchor_urb(cur->urb, &acm->delayed);
-	else
+	else if (cur)
 		acm_start_wb(acm, cur);
 out:
 	spin_unlock_irqrestore(&acm->write_lock, flags);
