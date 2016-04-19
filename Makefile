@@ -1,7 +1,7 @@
 VERSION = 4
 PATCHLEVEL = 6
 SUBLEVEL = 0
-EXTRAVERSION = -rc3-asoc
+EXTRAVERSION = -rc3-asoc-tplg
 NAME = Blurry Fish Butt
 
 # *DOCUMENTATION*
