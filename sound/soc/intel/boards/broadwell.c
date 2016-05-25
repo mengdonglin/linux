@@ -199,6 +199,26 @@ static struct snd_soc_dai_link broadwell_loopback_pcm_link = {
 	.dpcm_capture = 1,
 };
 
+static struct snd_soc_dai_link broadwell_be_link = {
+	/* SSP0 - Codec */
+		.name = "Codec",
+		.id = 0,
+		.cpu_dai_name = "snd-soc-dummy-dai",
+		.platform_name = "snd-soc-dummy",
+		.no_pcm = 1,
+		.codec_name = "i2c-INT343A:00",
+		.codec_dai_name = "rt286-aif1",
+		.init = broadwell_rt286_codec_init,
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBS_CFS,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		.be_hw_params_fixup = broadwell_ssp0_fixup,
+		.ops = &broadwell_rt286_ops,
+		.dpcm_playback = 1,
+		.dpcm_capture = 1,
+};
+
 /* broadwell digital audio interface glue - connects codec <--> CPU */
 static struct snd_soc_dai_link broadwell_rt286_dais[] = {
 	/* Back End DAI links */
@@ -254,9 +274,18 @@ static int bdw_add_dai_link(struct snd_soc_card *card, struct snd_soc_dai_link *
 	struct snd_soc_dai_link *src_link;
 	printk("bdw_add_dai_link: dai link name %s, stream name %s, ID %d\n", link->name, link->stream_name, link->id);
 
-	if (!link->stream_name) {
+	if (!link->name) {
 		WARN_ON(1);
 		return 0;
+	}
+
+	if (link->id == 8) {
+		printk("bdw_add_dai_link: add the BE link\n");
+		link->platform_name = broadwell_be_link.platform_name;
+		link->init = broadwell_rt286_codec_init;
+		link->be_hw_params_fixup = broadwell_ssp0_fixup;
+		link->ops = &broadwell_rt286_ops;
+		goto out;
 	}
 
 	if (!strcmp(link->stream_name, broadwell_system_pcm_link.stream_name)) {
@@ -288,6 +317,7 @@ static int bdw_add_dai_link(struct snd_soc_card *card, struct snd_soc_dai_link *
 	link->dpcm_playback = src_link->dpcm_playback;
 	link->dpcm_capture = src_link->dpcm_capture;
 
+out:
 	printk("\t dai link name %s, stream name %s\n", link->name, link->stream_name);
 	printk("\t cpu_dai_name %s, platform_name %s\n", link->cpu_dai_name, link->platform_name);
 	printk("\t codec_name %s, codec_dai_name %s\n", link->codec_name, link->codec_dai_name);
@@ -304,8 +334,10 @@ static struct snd_soc_aux_dev bdw_tplg_dev = {
 static struct snd_soc_card broadwell_rt286 = {
 	.name = "broadwell-rt286",
 	.owner = THIS_MODULE,
+#if 0
 	.dai_link = broadwell_rt286_dais,
 	.num_links = ARRAY_SIZE(broadwell_rt286_dais),
+#endif
 	.aux_dev = &bdw_tplg_dev,
 	.num_aux_devs = 1,
 	.controls = broadwell_controls,
