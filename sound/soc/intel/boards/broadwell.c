@@ -312,8 +312,8 @@ static int bdw_add_dai_link(struct snd_soc_card *card, struct snd_soc_dai_link *
 	link->dynamic = src_link->dynamic;
 	link->codec_name = src_link->codec_name;
 	link->codec_dai_name = src_link->codec_dai_name;
-	link->trigger[0] = src_link->trigger[0];
-	link->trigger[1] = src_link->trigger[1];
+	//link->trigger[0] = src_link->trigger[0];
+	//link->trigger[1] = src_link->trigger[1];
 	link->dpcm_playback = src_link->dpcm_playback;
 	link->dpcm_capture = src_link->dpcm_capture;
 
@@ -322,6 +322,7 @@ out:
 	printk("\t cpu_dai_name %s, platform_name %s\n", link->cpu_dai_name, link->platform_name);
 	printk("\t codec_name %s, codec_dai_name %s\n", link->codec_name, link->codec_dai_name);
 	printk("\t dynamic %d, dpcm_playback %d, dpcm_capture%d\n", link->dynamic, link->dpcm_playback,  link->dpcm_capture);
+	printk("\t trigger %d, %d\n", link->trigger[0], link->trigger[1]);
 	return 0;
 }
 
