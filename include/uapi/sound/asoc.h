@@ -125,6 +125,20 @@
 #define SND_SOC_TPLG_TUPLE_TYPE_WORD	4
 #define SND_SOC_TPLG_TUPLE_TYPE_SHORT	5
 
+
+/*
+ * Dynamic PCM trigger ordering. Triggering flexibility is required as some
+ * DSPs require triggering before/after their CPU platform and DAIs.
+ *
+ * i.e. some clients may want to manually order this call in their PCM
+ * trigger() whilst others will just use the regular core ordering.
+ */
+enum snd_soc_dpcm_trigger {
+	SND_SOC_DPCM_TRIGGER_PRE		= 0,
+	SND_SOC_DPCM_TRIGGER_POST,
+	SND_SOC_DPCM_TRIGGER_BESPOKE,
+};
+
 /* BE DAI flags */
 #define SND_SOC_TPLG_DAI_FLGBIT_SYMMETRIC_RATES         (1 << 0)
 #define SND_SOC_TPLG_DAI_FLGBIT_SYMMETRIC_CHANNELS      (1 << 1)
@@ -440,6 +454,7 @@ struct snd_soc_tplg_pcm {
 	struct snd_soc_tplg_stream stream[SND_SOC_TPLG_STREAM_CONFIG_MAX]; /* for DAI link */
 	__le32 num_streams;	/* number of streams */
 	struct snd_soc_tplg_stream_caps caps[2]; /* playback and capture for DAI */
+	__le32 trigger[2];	/* SND_SOC_DPCM_TRIGGER_ trigger flag for playback & capture */
 } __attribute__((packed));
 
 
