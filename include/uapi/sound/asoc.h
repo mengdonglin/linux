@@ -125,6 +125,9 @@
 #define SND_SOC_TPLG_TUPLE_TYPE_WORD	4
 #define SND_SOC_TPLG_TUPLE_TYPE_SHORT	5
 
+/* DAI link flags */
+#define SND_SOC_TPLG_LNK_FLGBIT_IGNORE_SUSPEND          (1 << 0)
+#define SND_SOC_TPLG_LNK_FLGBIT_IGNORE_POWERDOWN_TIME   (1 << 1)
 
 /*
  * Dynamic PCM trigger ordering. Triggering flexibility is required as some
@@ -455,6 +458,8 @@ struct snd_soc_tplg_pcm {
 	__le32 num_streams;	/* number of streams */
 	struct snd_soc_tplg_stream_caps caps[2]; /* playback and capture for DAI */
 	__le32 trigger[2];	/* SND_SOC_DPCM_TRIGGER_ trigger flag for playback & capture */
+	__le32 flag_mask;       /* bitmask of flags to configure, reserved */
+	__le32 flags;           /* SND_SOC_TPLG_LNK_FLGBIT_* flag value */
 } __attribute__((packed));
 
 
