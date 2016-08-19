@@ -1,7 +1,7 @@
 VERSION = 4
 PATCHLEVEL = 8
 SUBLEVEL = 0
-EXTRAVERSION = -rc2-asoc
+EXTRAVERSION = -rc2-asoc-tplg
 NAME = Psychotic Stoned Sheep
 
 # *DOCUMENTATION*
