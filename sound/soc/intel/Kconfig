@@ -119,7 +119,26 @@ config SND_SOC_INTEL_SKYLAKE
 
 endif ## SND_SOC_INTEL_SST_TOPLEVEL
 
+
 if SND_SOC_INTEL_SST_TOPLEVEL || SND_SOC_SOF_INTEL
+config SND_SOC_INTEL_SKYLAKE_HDA_DSP
+       bool "Enable HDAudio Codec + DSP support"
+       help
+         If you have a Intel Skylake+ platform with the DSP enabled in
+         the BIOS and an HDAudio codec, then enable this option by saying Y
+         This option will only have an effect if there are no ACPI-enumerated
+         audio devices (I2C, SoundWire).
+
+config SND_SOC_INTEL_SKYLAKE_FORCE_HDA_DSP
+       bool "Force HDAudio Codec + DSP support"
+       depends on SND_SOC_INTEL_SKYLAKE_HDA_DSP
+       help
+         If you have a Intel Skylake+ platform with the DSP enabled in
+         the BIOS and an HDAudio codec, then enable this option by saying Y
+         This option will ignore information from the BIOS and force the use
+         of the HDaudio codec, if present.
+         This is a debug option not recommended for distros.
+
 config SND_SOC_ACPI_INTEL_MATCH
 	tristate
 	select SND_SOC_ACPI if ACPI

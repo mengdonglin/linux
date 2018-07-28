@@ -468,6 +468,7 @@ static struct skl_ssp_clk skl_ssp_clks[] = {
 						{.name = "ssp5_sclkfs"},
 };
 
+#if IS_ENABLED(CONFIG_SND_SOC_INTEL_SKYLAKE_HDA_DSP)
 static struct snd_soc_acpi_mach *skl_find_hda_machine(struct skl *skl,
 					struct snd_soc_acpi_mach *machines)
 {
@@ -484,6 +485,7 @@ static struct snd_soc_acpi_mach *skl_find_hda_machine(struct skl *skl,
 	}
 	return NULL;
 }
+#endif
 
 static int skl_find_machine(struct skl *skl, void *driver_data)
 {
@@ -492,13 +494,16 @@ static int skl_find_machine(struct skl *skl, void *driver_data)
 	struct skl_machine_pdata *pdata;
 
 	mach = snd_soc_acpi_find_machine(mach);
-	if (!mach) {
+	if (!mach || IS_ENABLED(CONFIG_SND_SOC_INTEL_SKYLAKE_FORCE_HDA_DSP)) {
 		dev_dbg(bus->dev, "No matching I2S machine driver found\n");
+#if IS_ENABLED(CONFIG_SND_SOC_INTEL_SKYLAKE_HDA_DSP)
 		mach = skl_find_hda_machine(skl, driver_data);
+#endif
 		if (!mach) {
 			dev_err(bus->dev, "No matching machine driver found\n");
 			return -ENODEV;
 		}
+
 	}
 
 	skl->mach = mach;
