@@ -14,14 +14,114 @@
 #include <sound/sof.h>
 #include "sof-priv.h"
 
+#define SOF_PLATFORM "sof-audio"
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
+/* free the duplicated strings of HDMI links, but no the links.
+ * warning: SSP links cannot use this function since some strings
+ * are not duplicated.
+ */
+void sof_free_hdmi_links(struct snd_soc_dai_link *links, int link_num)
+{
+	int i;
+
+	if (!links || !link_num)
+		return;
+
+	for (i = 0; i < link_num; i++) {
+		kfree(links[i].name);
+		kfree(links[i].cpu_dai_name);
+		kfree(links[i].codec_name);
+		kfree(links[i].codec_dai_name);
+		kfree(links[i].platform_name);
+	}
+}
+
+/* set up HDMI backend dai links.
+ *
+ * template:
+ *		.name = "iDisp1",
+ *		.id = 3,
+ *		.cpu_dai_name = "iDisp1 Pin",
+ *		.codec_name = "ehdaudio0D2",
+ *		.codec_dai_name = "intel-hdmi-hifi1",
+ *		.platform_name = "sof-audio",
+ *		//.init = broxton_hdmi_init,
+ *		.dpcm_playback = 1,
+ *		.no_pcm = 1,
+ */
+int sof_hdmi_bes_setup(struct device *dev,
+		  struct snd_soc_dai_link *links,
+		  int offset,
+		  int link_num,
+		  int codec_device)
+{
+	char name[32];
+	int i, ret = 0;
+
+	if (!links || !link_num)
+		return -EINVAL;
+
+	links += offset;
+	for (i = 0; i < link_num; i++) {
+
+		links[i].id = i + offset;
+
+		snprintf(name, 32, "iDisp%d", i + 1);
+		links[i].name = devm_kstrdup(dev, name, GFP_KERNEL);
+		if (!links[i].name) {
+			ret = -ENOMEM;
+			goto err;
+		}
+
+		snprintf(name, 32, "iDisp%d Pin", i + 1);
+		links[i].cpu_dai_name = devm_kstrdup(dev, name, GFP_KERNEL);
+		if (!links[i].cpu_dai_name) {
+			ret = -ENOMEM;
+			goto err;
+		}
+
+		snprintf(name, 32, "ehdaudio0D%d", codec_device);
+		links[i].codec_name = devm_kstrdup(dev, name, GFP_KERNEL);
+		if (!links[i].codec_name) {
+			ret = -ENOMEM;
+			goto err;
+		}
+
+		snprintf(name, 32, "intel-hdmi-hifi%d", i + 1);
+		links[i].codec_dai_name = devm_kstrdup(dev, name, GFP_KERNEL);
+		if (!links[i].codec_dai_name) {
+			ret = -ENOMEM;
+			goto err;
+		}
+
+		links[i].platform_name = devm_kstrdup(dev,
+						      SOF_PLATFORM,
+						      GFP_KERNEL);
+		if (!links[i].platform_name) {
+			ret = -ENOMEM;
+			goto err;
+		}
+
+		links[i].dpcm_playback = 1;
+		links[i].no_pcm = 1;
+	}
+
+	return 0;
+err:
+	sof_free_hdmi_links(links, link_num);
+	return ret;
+}
+EXPORT_SYMBOL(sof_hdmi_bes_setup);
+#endif
+
 int sof_bes_setup(struct device *dev, struct snd_sof_dsp_ops *ops,
-		  struct snd_soc_dai_link *links, int link_num,
-		  struct snd_soc_card *card)
+		  struct snd_soc_dai_link *links, int link_num)
 {
 	char name[32];
 	int i;
 
-	if (!ops || !links || !card)
+	if (!ops || !links)
 		return -EINVAL;
 
 	/* set up BE dai_links */
@@ -40,9 +140,6 @@ int sof_bes_setup(struct device *dev, struct snd_sof_dsp_ops *ops,
 		links[i].dpcm_playback = 1;
 		links[i].dpcm_capture = 1;
 	}
-
-	card->dai_link = links;
-	card->num_links = link_num;
 
 	return 0;
 }

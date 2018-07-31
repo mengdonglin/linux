@@ -87,6 +87,21 @@ int sof_nocodec_setup(struct device *dev,
 		      struct snd_sof_dsp_ops *ops);
 
 int sof_bes_setup(struct device *dev, struct snd_sof_dsp_ops *ops,
-		  struct snd_soc_dai_link *links, int link_num,
-		  struct snd_soc_card *card);
+		  struct snd_soc_dai_link *links, int link_num);
+
+
+
+/* FIXME: pins should be decided by probing the HDMI codec */
+#define SOF_HDMI_PINS	3
+
+int sof_hdmi_fes_setup(struct device *dev,
+		       struct snd_soc_dai_link *links,
+		       int offset,
+		       int link_num);
+
+int sof_hdmi_bes_setup(struct device *dev,
+		       struct snd_soc_dai_link *links,
+		       int offset,
+		       int link_num,
+		       int codec_device);
 #endif
