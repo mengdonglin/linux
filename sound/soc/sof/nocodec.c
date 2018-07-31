@@ -33,6 +33,7 @@ int sof_nocodec_setup(struct device *dev,
 		      struct snd_sof_dsp_ops *ops)
 {
 	struct snd_soc_dai_link *links;
+	int dummy_link_num, link_num;
 	int ret;
 
 	if (!mach)
@@ -44,20 +45,61 @@ int sof_nocodec_setup(struct device *dev,
 	mach->sof_fw_filename = desc->nocodec_fw_filename;
 	mach->sof_tplg_filename = desc->nocodec_tplg_filename;
 
-	/* create dummy BE dai_links */
+	dummy_link_num = ops->dai_drv->num_drv;
+	link_num = dummy_link_num;
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
+	/* Each HDMI pin has a pair of FE and BE link.
+	 * TODO: decide the number of enabled HDMI pins by probing
+	 * the codec.
+	 */
+	link_num += SOF_HDMI_PINS * 2;
+#endif
+
 	links = devm_kzalloc(dev, sizeof(struct snd_soc_dai_link) *
-			     ops->dai_drv->num_drv, GFP_KERNEL);
+			     link_num, GFP_KERNEL);
 	if (!links)
 		return -ENOMEM;
 
-	ret = sof_bes_setup(dev, ops, links, ops->dai_drv->num_drv,
-			    &sof_nocodec_card);
+
+	/* create dummy BE dai_links for SSPs */
+	ret = sof_bes_setup(dev, ops, links, dummy_link_num);
 	if (ret) {
-		kfree(links);
-		return ret;
+		dev_err(dev, "Fail to setup SOF nocodec backends %d\n", ret);
+		goto err;
 	}
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
+	/* set up HDMI backend dai links */
+	ret = sof_hdmi_bes_setup(dev,
+				 links,
+				 dummy_link_num,
+				 SOF_HDMI_PINS,
+				 0);
+	if (ret) {
+		dev_err(dev, "Can't setup SOF nocodec HDMI backends %d\n", ret);
+		goto err;
+	}
+
+	/* set up HDMI frontends dai links */
+	ret = sof_hdmi_fes_setup(dev,
+				 links,
+				 dummy_link_num + SOF_HDMI_PINS,
+				 SOF_HDMI_PINS);
+	if (ret) {
+		dev_err(dev, "Can't setup SOF nocodec HDMI backends %d\n", ret);
+		goto err;
+	}
+#endif
+
+	sof_nocodec_card.dai_link = links;
+	sof_nocodec_card.num_links = link_num;
+
 	return 0;
+
+err:
+	kfree(links);
+	return ret;
 }
 EXPORT_SYMBOL(sof_nocodec_setup);
 
