@@ -1131,8 +1131,11 @@ struct snd_soc_dai_link {
 	/* pmdown_time is ignored at stop */
 	unsigned int ignore_pmdown_time:1;
 
-	/* Do not create a PCM for this DAI link (Backend link) */
+	/* Ignored and overridden by topology */
 	unsigned int ignore:1;
+
+	/* cannot be ignored by topology */
+	unsigned int cannot_ignore:1;
 
 	struct list_head list; /* DAI link list of the soc card */
 	struct snd_soc_dobj dobj; /* For topology */

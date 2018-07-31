@@ -2115,8 +2115,8 @@ static void soc_check_tplg_fes(struct snd_soc_card *card)
 
 			dai_link = &card->dai_link[i];
 
-			/* ignore this FE */
-			if (dai_link->dynamic) {
+			/* ignore this FE if it can be ignored*/
+			if (dai_link->dynamic && !dai_link->cannot_ignore) {
 				dai_link->ignore = true;
 				continue;
 			}
