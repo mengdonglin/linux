@@ -81,6 +81,10 @@ static int hda_codec_probe(struct snd_sof_dev *sdev, int addr)
 
 	/* use legacy bus only for HDA codecs, idisp uses ext bus */
 	if ((res & 0xFFFF0000) != IDISP_INTEL_VENDOR_ID) {
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_IGNORE_HDA_ANALOG_CODEC)
+		/* For debug: ignore 3rd party HDA analog codec */
+		return 0;
+#endif
 		hdev->type = HDA_DEV_LEGACY;
 		hda_codec_load_module(&hda_codec->codec);
 	}

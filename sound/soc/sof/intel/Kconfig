@@ -108,4 +108,13 @@ config SND_SOC_SOF_BYPASS_DSP
           Say Y if you have such a device.
           If unsure select "N".
 
+config SND_SOC_SOF_IGNORE_HDA_ANALOG_CODEC
+        tristate "SOF ignore HDA analog codec"
+        depends on SND_SOC_SOF_HDA
+        help
+          This makes SOF ignore HD-Audio analog codecs detected on bus.
+          Say Y if you have such a device.
+          If unsure select "N".
+
+
 endif ## SND_SOC_SOF_INTEL
