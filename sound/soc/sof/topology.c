@@ -738,6 +738,10 @@ static int sof_control_unload(struct snd_soc_component *scomp,
 
 	dev_dbg(sdev->dev, "tplg: unload control name : %s\n", scomp->name);
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	return 0;
+#endif
+
 	fcomp.hdr.cmd = SOF_IPC_GLB_TPLG_MSG | SOF_IPC_TPLG_COMP_FREE;
 	fcomp.hdr.size = sizeof(fcomp);
 	fcomp.id = scontrol->comp_id;
@@ -1462,6 +1466,10 @@ static int sof_link_ssp_load(struct snd_soc_component *scomp, int index,
 	u32 size = sizeof(*config);
 	int ret;
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	return 0;
+#endif
+
 	/* handle master/slave and inverted clocks */
 	sof_dai_set_format(hw_config, config);
 
@@ -1517,6 +1525,10 @@ static int sof_link_dmic_load(struct snd_soc_component *scomp, int index,
 	struct sof_ipc_reply reply;
 	u32 size;
 	int ret, j;
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	return 0;
+#endif
 
 	memset(&config->dmic, 0, sizeof(struct sof_ipc_dai_dmic_params));
 
@@ -1623,6 +1635,10 @@ static int sof_link_hda_load(struct snd_soc_component *scomp, int index,
 	struct sof_ipc_reply reply;
 	u32 size = sizeof(*config);
 	int ret;
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	return 0;
+#endif
 
 	/* init IPC */
 	memset(&config->hda, 0, sizeof(struct sof_ipc_dai_hda_params));
@@ -1930,6 +1946,8 @@ static const struct snd_soc_tplg_bytes_ext_ops sof_bytes_ext_ops[] = {
 
 static struct snd_soc_tplg_ops sof_tplg_ops = {
 	/* external kcontrol init - used for any driver specific init */
+
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
 	.control_load	= sof_control_load,
 	.control_unload	= sof_control_unload,
 
@@ -1941,6 +1959,7 @@ static struct snd_soc_tplg_ops sof_tplg_ops = {
 	.widget_load	= sof_widget_load,
 	.widget_ready	= sof_widget_ready,
 	.widget_unload	= sof_widget_unload,
+#endif
 
 	/* FE DAI - used for any driver specific init */
 	.dai_load	= sof_dai_load,
@@ -1950,8 +1969,10 @@ static struct snd_soc_tplg_ops sof_tplg_ops = {
 	.link_load	= sof_link_load,
 	.link_unload	= sof_link_unload,
 
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
 	/* completion - called at completion of firmware loading */
 	.complete	= sof_complete,
+#endif
 
 	/* manifest - optional to inform component of manifest */
 	.manifest	= sof_manifest,

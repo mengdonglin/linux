@@ -274,6 +274,7 @@ static int sof_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
 	/* register any debug/trace capabilities */
 	ret = snd_sof_dbg_init(sdev);
 	if (ret < 0) {
@@ -304,6 +305,10 @@ static int sof_probe(struct platform_device *pdev)
 			ret);
 		goto fw_run_err;
 	}
+#else
+	dev_info(sdev->dev, "SOF disabled DSP in legacy HDA mode\n",
+			ret);
+#endif
 
 	/* now register audio DSP platform driver */
 	ret = snd_soc_register_platform(&pdev->dev, &sdev->plat_drv);
@@ -323,6 +328,7 @@ static int sof_probe(struct platform_device *pdev)
 		goto comp_err;
 	}
 
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
 	/* init DMA trace */
 	ret = snd_sof_init_trace(sdev);
 	if (ret < 0) {
@@ -330,6 +336,7 @@ static int sof_probe(struct platform_device *pdev)
 		dev_warn(sdev->dev,
 			 "warning: failed to initialize trace %d\n", ret);
 	}
+#endif
 
 	return 0;
 

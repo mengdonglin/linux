@@ -65,6 +65,10 @@ static int sof_pcm_hw_params(struct snd_pcm_substream *substream,
 	dev_dbg(sdev->dev, "pcm: hw params stream %d dir %d\n",
 		spcm->pcm.pcm_id, substream->stream);
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	return 0;
+#endif
+
 	memset(&pcm, 0, sizeof(pcm));
 
 	/* allocate audio buffer pages */
@@ -179,6 +183,10 @@ static int sof_pcm_hw_free(struct snd_pcm_substream *substream)
 	dev_dbg(sdev->dev, "pcm: free stream %d dir %d\n", spcm->pcm.pcm_id,
 		substream->stream);
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	return 0;
+#endif
+
 	stream.hdr.size = sizeof(stream);
 	stream.hdr.cmd = SOF_IPC_GLB_STREAM_MSG | SOF_IPC_STREAM_PCM_FREE;
 	stream.comp_id = spcm->stream[substream->stream].comp_id;
@@ -207,6 +215,10 @@ static int sof_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 
 	dev_dbg(sdev->dev, "pcm: trigger stream %d dir %d cmd %d\n",
 		spcm->pcm.pcm_id, substream->stream, cmd);
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	return 0;
+#endif
 
 	stream.hdr.size = sizeof(stream);
 	stream.hdr.cmd = SOF_IPC_GLB_STREAM_MSG;

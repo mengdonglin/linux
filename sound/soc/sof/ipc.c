@@ -136,6 +136,11 @@ int sof_ipc_tx_message(struct snd_sof_ipc *ipc, u32 header,
 	struct snd_sof_ipc_msg *msg;
 	unsigned long flags;
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: sof_ipc_tx_message: should not tx IPC in legacy mode\n");
+	return -1;
+#endif
+
 	spin_lock_irqsave(&sdev->ipc_lock, flags);
 
 	/* get an empty message */
@@ -231,6 +236,11 @@ void sof_ipc_drop_all(struct snd_sof_ipc *ipc)
 	struct snd_sof_ipc_msg *msg, *tmp;
 	unsigned long flags;
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: sof_ipc_drop_all: should not use IPC in legacy mode\n");
+	return;
+#endif
+
 	/* drop all TX and Rx messages before we stall + reset DSP */
 	spin_lock_irqsave(&sdev->ipc_lock, flags);
 
@@ -252,6 +262,11 @@ EXPORT_SYMBOL(sof_ipc_drop_all);
 int snd_sof_ipc_reply(struct snd_sof_dev *sdev, u32 msg_id)
 {
 	struct snd_sof_ipc_msg *msg;
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_ipc_reply: should not use IPC in legacy mode\n");
+	return -1;
+#endif
 
 	msg = sof_ipc_reply_find_msg(sdev->ipc, msg_id);
 	if (!msg) {
@@ -329,6 +344,11 @@ static void ipc_msgs_rx(struct work_struct *work)
 /* schedule work to transmit any IPC in queue */
 void snd_sof_ipc_msgs_tx(struct snd_sof_dev *sdev)
 {
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_ipc_msgs_tx: should not use IPC in legacy mode\n");
+	return;
+#endif
+
 	schedule_work(&sdev->ipc->tx_kwork);
 }
 EXPORT_SYMBOL(snd_sof_ipc_msgs_tx);
@@ -336,6 +356,11 @@ EXPORT_SYMBOL(snd_sof_ipc_msgs_tx);
 /* schedule work to handle IPC from DSP */
 void snd_sof_ipc_msgs_rx(struct snd_sof_dev *sdev)
 {
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_ipc_msgs_rx: should not use IPC in legacy mode\n");
+	return;
+#endif
+
 	schedule_work(&sdev->ipc->rx_kwork);
 }
 EXPORT_SYMBOL(snd_sof_ipc_msgs_rx);
@@ -482,6 +507,11 @@ int snd_sof_ipc_stream_posn(struct snd_sof_dev *sdev,
 	struct sof_ipc_stream stream;
 	int err;
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_ipc_stream_posn: should not use IPC in legacy mode\n");
+	return -1;
+#endif
+
 	/* read position via slower IPC */
 	stream.hdr.size = sizeof(stream);
 	stream.hdr.cmd = SOF_IPC_GLB_STREAM_MSG | SOF_IPC_STREAM_POSITION;
@@ -513,6 +543,11 @@ int snd_sof_ipc_set_comp_data(struct snd_sof_ipc *ipc,
 	struct snd_sof_dev *sdev = ipc->sdev;
 	struct sof_ipc_ctrl_data *cdata = scontrol->control_data;
 	int err;
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_ipc_set_comp_data: should not use IPC in legacy mode\n");
+	return -1;
+#endif
 
 	/* read firmware volume */
 	if (scontrol->readback_offset != 0) {
@@ -556,6 +591,11 @@ int snd_sof_ipc_get_comp_data(struct snd_sof_ipc *ipc,
 	struct sof_ipc_ctrl_data *cdata = scontrol->control_data;
 	int err;
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_ipc_get_comp_data: should not use IPC in legacy mode\n");
+	return -1;
+#endif
+
 	/* read firmware byte counters */
 	if (scontrol->readback_offset != 0) {
 		/* we can read values via mmaped region */
@@ -597,6 +637,11 @@ int snd_sof_dsp_mailbox_init(struct snd_sof_dev *sdev, u32 dspbox,
 			     size_t dspbox_size, u32 hostbox,
 			     size_t hostbox_size)
 {
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_dsp_mailbox_init: should not use ipc in legacy mode\n");
+	return -1;
+#endif
+
 	sdev->dsp_box.offset = dspbox;
 	sdev->dsp_box.size = dspbox_size;
 	sdev->host_box.offset = hostbox;
@@ -610,6 +655,11 @@ struct snd_sof_ipc *snd_sof_ipc_init(struct snd_sof_dev *sdev)
 	struct snd_sof_ipc *ipc;
 	struct snd_sof_ipc_msg *msg;
 	int i;
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_ipc_init: should not use ipc in legacy mode\n");
+	return NULL;
+#endif
 
 	ipc = devm_kzalloc(sdev->dev, sizeof(*ipc), GFP_KERNEL);
 	if (!ipc)
@@ -653,6 +703,11 @@ EXPORT_SYMBOL(snd_sof_ipc_init);
 
 void snd_sof_ipc_free(struct snd_sof_dev *sdev)
 {
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
+	dev_err(sdev->dev, "error: snd_sof_ipc_free: should not use ipc in legacy mode\n");
+	return;
+#endif
+
 	cancel_work_sync(&sdev->ipc->tx_kwork);
 	cancel_work_sync(&sdev->ipc->rx_kwork);
 }

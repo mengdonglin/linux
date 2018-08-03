@@ -60,6 +60,7 @@ struct snd_sof_dsp_ops sof_apl_ops = {
 	.irq_handler	= hda_dsp_ipc_irq_handler,
 	.irq_thread	= hda_dsp_ipc_irq_thread,
 
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_BYPASS_DSP)
 	/* mailbox */
 	.mailbox_read	= hda_dsp_mailbox_read,
 	.mailbox_write	= hda_dsp_mailbox_write,
@@ -92,6 +93,7 @@ struct snd_sof_dsp_ops sof_apl_ops = {
 	.trace_init = hda_dsp_trace_init,
 	.trace_release = hda_dsp_trace_release,
 	.trace_trigger = hda_dsp_trace_trigger,
+#endif
 
 	/* DAI drivers */
 	.dai_drv		= &hda_dai_drv,
