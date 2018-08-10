@@ -27,6 +27,7 @@ static const struct snd_soc_dapm_widget skl_hda_widgets[] = {
 
 static const struct snd_soc_dapm_route skl_hda_map[] = {
 
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	{ "hifi3", NULL, "iDisp3 Tx"},
 	{ "iDisp3 Tx", NULL, "iDisp3_out"},
 	{ "hifi2", NULL, "iDisp2 Tx"},
@@ -56,6 +57,11 @@ static const struct snd_soc_dapm_route skl_hda_map[] = {
 	{ "Digital CPU Capture", NULL, "Digital Codec Capture" },
 	{ "codec2_in", NULL, "Alt Analog CPU Capture" },
 	{ "Alt Analog CPU Capture", NULL, "Alt Analog Codec Capture" },
+#else
+	{ "hifi3", NULL, "iDisp3 Tx"},
+	{ "hifi2", NULL, "iDisp2 Tx"},
+	{ "hifi1", NULL, "iDisp1 Tx"},
+#endif
 };
 
 static int skl_hda_card_late_probe(struct snd_soc_card *card)
