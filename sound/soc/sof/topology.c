@@ -1699,6 +1699,7 @@ static int sof_link_load(struct snd_soc_component *scomp, int index,
 	if (!link->no_pcm)
 		return 0;
 
+#ifndef CONFIG_SND_SOC_SOF_FORCE_LEGACY_HDA
 	/* only support 1 config atm */
 	if (le32_to_cpu(cfg->num_hw_configs) != 1) {
 		dev_err(sdev->dev, "error: unexpected DAI config count %d\n",
@@ -1751,6 +1752,7 @@ static int sof_link_load(struct snd_soc_component *scomp, int index,
 	}
 	if (ret < 0)
 		return ret;
+#endif
 
 	dai = snd_sof_find_dai(sdev, (char *)link->name);
 	if (dai) {
