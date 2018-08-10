@@ -75,6 +75,8 @@ struct snd_soc_dai_link skl_hda_be_dai_links[HDA_DSP_MAX_BE_DAI_LINKS] = {
 		.dpcm_playback = 1,
 		.no_pcm = 1,
 	},
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_IGNORE_HDA_ANALOG_CODEC)
 	{
 		.name = "Analog Playback and Capture",
 		.id = 4,
@@ -99,6 +101,7 @@ struct snd_soc_dai_link skl_hda_be_dai_links[HDA_DSP_MAX_BE_DAI_LINKS] = {
 		.init = NULL,
 		.no_pcm = 1,
 	},
+#endif
 };
 
 int skl_hda_hdmi_jack_init(struct snd_soc_card *card)
