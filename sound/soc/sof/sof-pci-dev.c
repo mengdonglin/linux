@@ -217,6 +217,16 @@ static int sof_pci_probe(struct pci_dev *pci,
 	ret = sof_nocodec_setup(dev, sof_pdata, mach, desc, ops);
 	if (ret < 0)
 		goto release_regions;
+
+#elif IS_ENABLED(CONFIG_SND_SOC_SOF_FORCE_LEGACY_HDA)
+	/* force to use HDA only */
+	dev_warn(dev, "Force to use HDA machine driver\n");
+	mach = sof_find_hda_machine(desc->machines);
+	if (!mach) {
+		dev_err(dev, "No HDA machine driver found\n");
+		goto release_regions;
+	}
+
 #else
 	/* find machine */
 	mach = snd_soc_acpi_find_machine(desc->machines);

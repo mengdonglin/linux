@@ -66,3 +66,16 @@ int sof_create_platform_device(struct sof_platform_priv *priv)
 	return 0;
 }
 EXPORT_SYMBOL(sof_create_platform_device);
+
+struct snd_soc_acpi_mach *sof_find_hda_machine(
+	struct snd_soc_acpi_mach *machines)
+{
+	struct snd_soc_acpi_mach *mach;
+
+	for (mach = machines; mach->id[0]; mach++) {
+		if (!strcmp(mach->id, "HDA_GEN"))
+			return mach;
+	}
+	return NULL;
+}
+EXPORT_SYMBOL(sof_find_hda_machine);

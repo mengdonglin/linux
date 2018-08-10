@@ -55,6 +55,8 @@ struct snd_soc_acpi_mach snd_soc_acpi_intel_bxt_machines[] = {
 		.id = "HDA_GEN",
 		.drv_name = "skl_hda_generic",
 		.fw_filename = "intel/dsp_fw_bxtn.bin",
+		/* TODO: define sof_fw_filename */
+		.sof_tplg_filename = "intel/sof-apl-hda.tplg",
 		.machine_quirk = NULL,
 		.quirk_data = NULL,
 	},
