@@ -1865,6 +1865,7 @@ static int sof_route_load(struct snd_soc_component *scomp, int index,
 		dev_dbg(sdev->dev, "warning: neither Linked source component %s nor sink component %s is of buffer type, ignoring link\n",
 			route->source, route->sink);
 	} else {
+		reply.error = 0;
 		ret = sof_ipc_tx_message(sdev->ipc,
 					 connect.hdr.cmd,
 					 &connect, sizeof(connect),
