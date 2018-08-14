@@ -477,6 +477,11 @@ static int hdac_hdmi_set_hw_params(struct snd_pcm_substream *substream,
 	pcm->format = format;
 	pcm->channels = params_channels(hparams);
 
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
+	/* FIXME: to use the steam tag set by SOF driver */
+	pcm->stream_tag  = (1 << 4);
+#endif
+
 	return 0;
 }
 
