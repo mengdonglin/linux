@@ -459,6 +459,7 @@ int hda_dsp_stream_hw_params(struct snd_sof_dev *sdev,
 		hstream->fifo_size = 0;
 	}
 
+	snd_hdac_updatew(stream->pplc_addr, AZX_REG_ML_LOSIDV, (1 << hstream->stream_tag), 1 << hstream->stream_tag);
 	return ret;
 }
 
