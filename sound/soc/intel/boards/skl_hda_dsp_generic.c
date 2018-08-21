@@ -61,6 +61,21 @@ static const struct snd_soc_dapm_route skl_hda_map[] = {
 	{ "hifi3", NULL, "iDisp3 Tx"},
 	{ "hifi2", NULL, "iDisp2 Tx"},
 	{ "hifi1", NULL, "iDisp1 Tx"},
+
+
+	{ "Analog Out", NULL, "Codec Output Pin1" },
+	{ "Digital Out", NULL, "Codec Output Pin2" },
+	//{ "Alt Analog Out", NULL, "Codec Output Pin3" },
+
+	{ "Codec Input Pin1", NULL, "Analog In" },
+	{ "Codec Input Pin2", NULL, "Digital In" },
+	//{ "Codec Input Pin3", NULL, "Alt Analog In" },
+
+	{ "Analog Codec Playback", NULL, "Analog CPU Playback" },
+	{ "Digital Codec Playback", NULL, "Digital CPU Playback" },
+
+	{ "Analog CPU Capture", NULL, "Analog Codec Capture" },
+	{ "Digital CPU Capture", NULL, "Digital Codec Capture" },
 #endif
 };
 
