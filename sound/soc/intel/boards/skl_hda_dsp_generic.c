@@ -101,16 +101,15 @@ static struct snd_soc_card hda_soc_card = {
 #define IDISP_ROUTE_COUNT	(IDISP_DAI_COUNT * 2)
 #define IDISP_CODEC_MASK	0x4
 
-static int skl_hda_fill_card_info(struct skl_machine_pdata *pdata)
+static int skl_hda_fill_card_info(u32 codec_mask, const char *platform_name)
 {
 	struct snd_soc_card *card = &hda_soc_card;
-	u32 codec_count, codec_mask;
+	u32 codec_count;
 	int i, num_links, num_route;
 
-	codec_mask = pdata->codec_mask;
 	codec_count = hweight_long(codec_mask);
 
-	if (codec_count == 1 && pdata->codec_mask & IDISP_CODEC_MASK) {
+	if (codec_count == 1 && codec_mask & IDISP_CODEC_MASK) {
 		num_links = IDISP_DAI_COUNT;
 		num_route = IDISP_ROUTE_COUNT;
 	} else if (codec_count == 2 && codec_mask & IDISP_CODEC_MASK) {
@@ -126,7 +125,7 @@ static int skl_hda_fill_card_info(struct skl_machine_pdata *pdata)
 	card->num_dapm_routes = num_route;
 
 	for (i = 0; i < num_links; i++)
-		skl_hda_be_dai_links[i].platform_name = pdata->platform;
+		skl_hda_be_dai_links[i].platform_name = platform_name;
 
 	return 0;
 }
@@ -149,7 +148,7 @@ static int skl_hda_audio_probe(struct platform_device *pdev)
 	if (!pdata)
 		return -EINVAL;
 
-	ret = skl_hda_fill_card_info(pdata);
+	ret = skl_hda_fill_card_info(pdata->codec_mask,  pdata->platform);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Unsupported HDAudio/iDisp configuration found\n");
 		return ret;
