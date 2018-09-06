@@ -132,7 +132,9 @@ static int skl_hda_fill_card_info(u32 codec_mask, const char *platform_name)
 
 static int skl_hda_audio_probe(struct platform_device *pdev)
 {
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	struct skl_machine_pdata *pdata;
+#endif
 	struct skl_hda_private *ctx;
 	int ret;
 
@@ -144,11 +146,16 @@ static int skl_hda_audio_probe(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&ctx->hdmi_pcm_list);
 
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	pdata = dev_get_drvdata(&pdev->dev);
 	if (!pdata)
 		return -EINVAL;
 
 	ret = skl_hda_fill_card_info(pdata->codec_mask,  pdata->platform);
+#else
+	/* use SOF driver */
+	ret = skl_hda_fill_card_info(IDISP_CODEC_MASK, "sof-audio");
+#endif
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Unsupported HDAudio/iDisp configuration found\n");
 		return ret;
@@ -156,7 +163,11 @@ static int skl_hda_audio_probe(struct platform_device *pdev)
 
 	ctx->pcm_count = hda_soc_card.num_links;
 	ctx->dai_index = 1; /* hdmi codec dai name starts from index 1 */
+#if !IS_ENABLED(CONFIG_SND_SOC_SOF_INTEL)
 	ctx->platform_name = pdata->platform;
+#else
+	ctx->platform_name = "sof-audio";
+#endif
 
 	hda_soc_card.dev = &pdev->dev;
 	snd_soc_card_set_drvdata(&hda_soc_card, ctx);

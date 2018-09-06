@@ -524,4 +524,8 @@ extern const struct sof_arch_ops sof_xtensa_arch_ops;
  * Utilities
  */
 int sof_create_platform_device(struct sof_platform_priv *priv);
+
+struct snd_soc_acpi_mach *sof_find_hda_machine(
+			struct snd_soc_acpi_mach *machines);
+
 #endif

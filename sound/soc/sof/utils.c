@@ -12,6 +12,7 @@
 #include <linux/platform_device.h>
 #include <sound/soc.h>
 #include <sound/sof.h>
+#include <sound/soc-acpi-intel-match.h>
 #include "sof-priv.h"
 
 int sof_bes_setup(struct device *dev, struct snd_sof_dsp_ops *ops,
@@ -66,3 +67,16 @@ int sof_create_platform_device(struct sof_platform_priv *priv)
 	return 0;
 }
 EXPORT_SYMBOL(sof_create_platform_device);
+
+struct snd_soc_acpi_mach *sof_find_hda_machine(
+	struct snd_soc_acpi_mach *machines)
+{
+	struct snd_soc_acpi_mach *mach;
+
+	mach = snd_soc_acpi_intel_hda_machines;
+
+	/* all entries in the machine table use the same firmware */
+	mach->sof_fw_filename = machines->sof_fw_filename;
+	return mach;
+}
+EXPORT_SYMBOL(sof_find_hda_machine);
