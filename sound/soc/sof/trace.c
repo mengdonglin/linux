@@ -196,6 +196,9 @@ int snd_sof_init_trace(struct snd_sof_dev *sdev)
 {
 	int ret;
 
+	printk("amanda: snd_sof_init_trace: Disable trace\n");
+	return 0;
+
 	/* set false before start initialization */
 	sdev->dtrace_is_enabled = false;
 
